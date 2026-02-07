@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gabriel - Cinematic Autumn</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400;1,700&family=Quicksand:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <style>
+        /* ================= RESET ================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        
+        body { 
+            background-color: #0f0800; 
+            color: #fff; 
+            font-family: 'Quicksand', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none; 
+        }
+
+        /* ================= CURSOR ================= */
+        #cursor {
+            position: fixed; width: 10px; height: 10px; background: #FFD700; 
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%); box-shadow: 0 0 20px #FFD700, 0 0 40px #FF8C00;
+        }
+        #cursor-follower {
+            position: fixed; width: 50px; height: 50px;
+            border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 50%;
+            pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
+            transition: width 0.1s, height 0.1s, background 0.1s;
+        }
+        body.hovering #cursor-follower {
+            width: 90px; height: 90px; background: rgba(255, 215, 0, 0.05); border-color: #fff;
+        }
+
+        /* ================= LAYERS ================= */
+        #scroll-track { height: 500vh; position: relative; }
+        .sticky-container { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; }
+
+        /* LAYER 1: VIDEO */
+        #hero-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: 0; 
+            filter: contrast(1.2) brightness(0.7) sepia(0.4) saturate(1.2);
+        }
+
+        /* LAYER 2: 3D WORLD */
+        #three-canvas-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5; pointer-events: none; 
+        }
+
+        #vignette {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 2;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%);
+        }
+
+        /* ================= UI ELEMENTS ================= */
+        .name-tag {
+            position: absolute; bottom: 40px; right: 40px; text-align: right; z-index: 200;
+            padding: 25px 50px; 
+            background: rgba(20, 10, 0, 0.85); 
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-right: 4px solid #FFD700; 
+            backdrop-filter: blur(20px); border-radius: 4px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            opacity: 0; transform: translateY(20px);
+        }
+        .name-tag.active { opacity: 1; transform: translateY(0); }
+        .name-tag.changing { opacity: 0; transform: translateY(-10px); }
+
+        .name-tag h1 {
+            font-family: 'Playfair Display', serif; font-size: 3.5rem; color: #FFD700;
+            line-height: 1; margin: 0; letter-spacing: 2px; font-style: italic;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            min-width: 300px; 
+        }
+        .name-tag p {
+            color: #fff; font-size: 1rem; letter-spacing: 5px; margin-top: 10px;
+            font-weight: 700; text-transform: uppercase; opacity: 0.8;
+        }
+
+        /* ================= SKILLS ================= */
+        #skills-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 50vh;
+            z-index: 100; pointer-events: none;
+            display: flex; justify-content: center; align-items: flex-end; padding-bottom: 50px;
+        }
+        .skills-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px;
+            width: 85%; max-width: 1100px; perspective: 1000px;
+        }
+        .skill-card {
+            background: rgba(30, 15, 0, 0.85);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-bottom: 3px solid #FF8C00;
+            padding: 30px 25px; text-align: center; border-radius: 16px;
+            pointer-events: auto;
+            opacity: 0; transform: translateY(100px) rotateX(20deg); 
+            transition: all 0.6s cubic-bezier(0.2, 1, 0.3, 1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+        .skill-card:hover {
+            background: rgba(50, 25, 0, 0.95); border-color: #FFD700;
+            transform: translateY(-10px) scale(1.05); cursor: pointer;
+            box-shadow: 0 20px 50px rgba(255, 140, 0, 0.2);
+        }
+        .skill-card.visible { opacity: 1; transform: translateY(0) rotateX(0); }
+        
+        .skill-card h3 { 
+            font-family: 'Playfair Display', serif; color: #FFD700; 
+            margin-bottom: 10px; font-size: 1.6rem; font-style: italic;
+        }
+        .skill-card p { color: #ccc; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f0800; z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 1s ease-out;
+        }
+
+        /* ================= MOBILE OPTIMIZATION (FIXED) ================= */
+        @media (max-width: 768px) {
+            #cursor, #cursor-follower { display: none; } /* Hide cursor di HP */
+            
+            .skills-grid {
+                /* Perkecil grid biar muat */
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 10px; 
+                width: 95%;
+                margin-bottom: 20px; /* Jaga jarak dari nama */
+            }
+            .skill-card {
+                padding: 15px 10px; /* Padding lebih kecil */
+            }
+            .skill-card h3 {
+                font-size: 1.2rem; /* Font lebih kecil */
+                margin-bottom: 5px;
+            }
+            .skill-card p {
+                font-size: 0.7rem; /* Deskripsi kecil */
+                letter-spacing: 1px;
+            }
+            
+            .name-tag { 
+                bottom: 20px; right: 10px; left: 10px; /* Full width di bawah */
+                text-align: center;
+                padding: 15px 20px; 
+                border-right: none; border-bottom: 2px solid #FFD700;
+                background: rgba(20, 10, 0, 0.9);
+            }
+            .name-tag h1 { font-size: 2rem; min-width: auto; }
+            .name-tag p { font-size: 0.8rem; letter-spacing: 2px; margin-top: 5px; }
+            
+            /* Sembunyikan Vignette di HP biar lebih terang */
+            #vignette { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <div id="cursor-follower"></div>
+    <div id="vignette"></div>
+
+    <div id="loader">
+        <h2 style="color: #FFD700; font-family: 'Playfair Display'; letter-spacing: 3px; font-style: italic; font-size: 2rem;">Loading...</h2>
+        <div style="margin-top: 15px; color: #888; font-size: 14px; letter-spacing: 2px;" id="progress-text">0%</div>
+    </div>
+
+    <div id="scroll-track">
+        <div class="sticky-container">
+            <canvas id="hero-canvas"></canvas>
+            <div id="three-canvas-container"></div>
+            
+            <div class="name-tag" id="main-name-tag" onmouseenter="addHover()" onmouseleave="removeHover()">
+                <h1 id="name-heading">SCROLL DOWN</h1>
+                <p id="name-sub">to explore</p>
+            </div>
+
+            <div id="skills-layer">
+                <div class="skills-grid">
+                    <div class="skill-card" data-trigger="0.38" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Web Dev</h3><p>React Ecosystem</p></div>
+                    <div class="skill-card" data-trigger="0.41" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Security</h3><p>Ethical Hacking</p></div>
+                    <div class="skill-card" data-trigger="0.44" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Mobile</h3><p>Cross Platform</p></div>
+                    <div class="skill-card" data-trigger="0.47" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>3D & AR</h3><p>Immersive Web</p></div>
+                     <div class="skill-card" data-trigger="0.50" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Backend</h3><p>Scalable API</p></div>
+                     <div class="skill-card" data-trigger="0.53" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Design</h3><p>UI Aesthetics</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        const config = { folder: 'gg', frameCount: 150, prefix: 'ezgif-frame-', extension: 'jpg', digits: 3 };
+
+        const canvas = document.getElementById("hero-canvas");
+        const ctx = canvas.getContext("2d");
+        const track = document.getElementById("scroll-track");
+        const cards = document.querySelectorAll('.skill-card');
+        const loader = document.getElementById("loader");
+        const pText = document.getElementById("progress-text");
+        
+        const nameTag = document.getElementById("main-name-tag");
+        const nameHeading = document.getElementById("name-heading");
+        const nameSub = document.getElementById("name-sub");
+        let isNameShowing = false; 
+
+        const images = [];
+        let isLoaded = false;
+        let scrollFraction = 0;
+
+        // ============ 1. CURSOR & TOUCH INPUT ============
+        const cursor = document.getElementById("cursor");
+        const follower = document.getElementById("cursor-follower");
+        let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
+        let mouse3DX = -9999, mouse3DY = -9999; 
+
+        window.addHover = () => document.body.classList.add('hovering');
+        window.removeHover = () => document.body.classList.remove('hovering');
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px'; cursor.style.top = mouseY + 'px';
+            update3DMouse(e.clientX, e.clientY);
+        });
+
+        // HANDLE TOUCH HP (GESEK LAYAR UNTUK ANGIN)
+        document.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                const touch = e.touches[0];
+                mouseX = touch.clientX; mouseY = touch.clientY;
+                update3DMouse(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => { mouse3DX = -9999; mouse3DY = -9999; });
+
+        function update3DMouse(clientX, clientY) {
+            mouse3DX = (clientX / window.innerWidth) * 2 - 1;
+            mouse3DY = -(clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function animateCursor() {
+            posX += (mouseX - posX) / 6; 
+            posY += (mouseY - posY) / 6;
+            follower.style.left = posX + 'px'; follower.style.top = posY + 'px';
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        // ============ 2. THREE.JS: OPTIMIZED AUTUMN ============
+        let scene, camera, renderer;
+        const leaves = [];
+        let rayMesh1, rayMesh2;
+
+        function init3DWorld() {
+            const container = document.getElementById('three-canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x1a1005, 0.02);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 50;
+
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false }); 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // OPTIMISASI UTAMA: BATASI PIXEL RATIO MAX 1.5
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            const sunLight = new THREE.DirectionalLight(0xFF8C00, 2.5); 
+            sunLight.position.set(30, 50, 20);
+            scene.add(sunLight);
+
+            // GOD RAYS
+            const rayGeometry = new THREE.ConeGeometry(30, 150, 32, 1, true);
+            const rayMaterial = new THREE.MeshBasicMaterial({
+                color: 0xFFD700, transparent: true, opacity: 0.08, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
+            });
+            rayMesh1 = new THREE.Mesh(rayGeometry, rayMaterial);
+            rayMesh1.position.set(40, 70, -30); rayMesh1.rotation.set(Math.PI/8, 0, Math.PI/4);
+            scene.add(rayMesh1);
+
+            // DAUN 500 BIJI
+            const leafShape = new THREE.Shape();
+            leafShape.moveTo(0, 0.5);
+            leafShape.bezierCurveTo(1.5, 2, 1.5, 5, 0, 7); 
+            leafShape.bezierCurveTo(-1.5, 5, -1.5, 2, 0, 0.5);
+            const geometry = new THREE.ShapeGeometry(leafShape);
+            
+            const colors = [0x8B4513, 0xA0522D, 0xD2691E, 0xFF8C00, 0xB8860B, 0x800000];
+
+            for(let i=0; i<500; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: color, side: THREE.DoubleSide, roughness: 0.9, metalness: 0.1
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+
+                mesh.position.set(
+                    (Math.random() - 0.5) * 140,
+                    (Math.random() - 0.5) * 120 + 30,
+                    (Math.random() - 0.5) * 120 
+                );
+                const s = Math.random() * 0.3 + 0.15;
+                mesh.scale.set(s, s, s);
+                mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                
+                mesh.userData = {
+                    speedY: Math.random() * 0.06 + 0.02, 
+                    rotSpeedX: Math.random() * 0.05,
+                    rotSpeedZ: Math.random() * 0.05,
+                    initialX: mesh.position.x,
+                    swayOffset: Math.random() * 100
+                };
+                leaves.push(mesh);
+                scene.add(mesh);
+            }
+            animate3D();
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            const time = Date.now() * 0.001;
+
+            rayMesh1.rotation.y = Math.sin(time * 0.2) * 0.1;
+
+            // TITIK ANGIN DI 3D
+            // Kita pakai Z=0 sampai Z dalam biar efeknya "Tabung Angin"
+            const targetPoint = new THREE.Vector3(mouse3DX * 50, mouse3DY * 50, 0);
+
+            leaves.forEach(leaf => {
+                // Jatuh
+                leaf.position.y -= leaf.userData.speedY;
+                leaf.position.x = leaf.userData.initialX + Math.sin(time + leaf.userData.swayOffset) * 5;
+                leaf.rotation.x += leaf.userData.rotSpeedX;
+                leaf.rotation.z += leaf.userData.rotSpeedZ;
+
+                // Reset Loop
+                if(leaf.position.y < -70) {
+                    leaf.position.y = 80;
+                    leaf.position.x = (Math.random() - 0.5) * 140;
+                    leaf.position.z = (Math.random() - 0.5) * 120;
+                    leaf.userData.initialX = leaf.position.x;
+                }
+
+                // --- INTERAKSI MENTAL YANG DIPERBAIKI ---
+                // Kita hitung jarak X dan Y saja (abaikan kedalaman Z)
+                // Jadi daun di belakang pun kena "Angin" kalau sejalur
+                const dx = leaf.position.x - targetPoint.x;
+                const dy = leaf.position.y - targetPoint.y;
+                const dist2D = Math.sqrt(dx*dx + dy*dy);
+
+                // Radius interaksi 40 (Cukup besar buat HP)
+                if(dist2D < 40) {
+                    // Arah tolak
+                    const angle = Math.atan2(dy, dx);
+                    // Dorong kenceng (Speed 3.0)
+                    leaf.position.x += Math.cos(angle) * 3.0;
+                    leaf.position.y += Math.sin(angle) * 3.0;
+                    
+                    // Putar kenceng efek kena angin
+                    leaf.rotation.x += 0.5; 
+                    leaf.rotation.z += 0.5;
+                }
+            });
+
+            // Kamera gerak halus
+            camera.position.x += (mouse3DX * 5 - camera.position.x) * 0.05;
+            camera.position.y += (mouse3DY * 5 - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        // ============ 3. PRELOAD & 2D ============
+        const getPath = i => `${config.folder}/${config.prefix}${(i + 1).toString().padStart(config.digits, '0')}.${config.extension}`;
+
+        const preload = () => {
+            let count = 0;
+            for(let i=0; i<config.frameCount; i++){
+                const img = new Image();
+                img.src = getPath(i);
+                img.onload = () => { images[i] = img; updateProgress(++count); };
+                img.onerror = () => { images[i] = images[i-1] || new Image(); updateProgress(++count); };
+            }
+        };
+
+        function updateProgress(count) {
+            const percent = Math.round((count/config.frameCount)*100);
+            pText.innerText = percent + "%";
+            if(count === config.frameCount) {
+                isLoaded = true;
+                init3DWorld(); 
+                setTimeout(() => {
+                    loader.style.opacity = 0;
+                    setTimeout(()=> {
+                        loader.style.display='none';
+                        nameTag.classList.add('active');
+                    }, 1000);
+                    init();
+                }, 800);
+            }
+        }
+
+        const draw = index => {
+            if(!images[index]) return;
+            const img = images[index];
+            const cRatio = canvas.width / canvas.height; const iRatio = img.width / img.height;
+            let dw, dh, ox, oy;
+            if(iRatio > cRatio){ dh = canvas.height; dw = img.width * (canvas.height/img.height); ox = (canvas.width - dw)/2; oy = 0; } 
+            else { dw = canvas.width; dh = img.height * (canvas.width/img.width); ox = 0; oy = (canvas.height - dh)/2; }
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(img, ox, oy, dw, dh);
+        };
+
+        // ============ 4. SCROLL LOGIC ============
+        const onScroll = () => {
+            if(!isLoaded) return;
+            const top = window.scrollY;
+            const max = track.scrollHeight - window.innerHeight;
+            scrollFraction = Math.min(Math.max(top/max, 0), 1);
+
+            // Ganti Nama "to explore"
+            if (scrollFraction > 0.35 && !isNameShowing) {
+                changeNameText("Gabriel", "Creative Developer");
+                isNameShowing = true;
+            } else if (scrollFraction <= 0.35 && isNameShowing) {
+                changeNameText("SCROLL DOWN", "to explore");
+                isNameShowing = false;
+            }
+
+            const frame = Math.min(config.frameCount-1, Math.floor(scrollFraction * config.frameCount));
+            requestAnimationFrame(() => draw(frame));
+
+            // LOGIKA KARTU: HILANG INSTAN SAAT SCROLL UP
+            cards.forEach((card, index) => {
+                const trig = parseFloat(card.getAttribute('data-trigger'));
+                
+                if (scrollFraction > trig - 0.05) {
+                    if (!card.classList.contains('visible')) {
+                        setTimeout(() => card.classList.add('visible'), index * 100);
+                    }
+                } else {
+                    card.classList.remove('visible'); // Hilang langsung
+                }
+            });
+        };
+
+        function changeNameText(heading, sub) {
+            nameTag.classList.add('changing'); 
+            setTimeout(() => {
+                nameHeading.innerText = heading;
+                nameSub.innerText = sub;
+                nameTag.classList.remove('changing'); 
+            }, 500); 
+        }
+
+        const onResize = () => {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            if(renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+            if(isLoaded) onScroll();
+        };
+
+        function init(){
+            onResize();
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('resize', onResize);
+            onScroll();
+        }
+
+        preload();
+    </script>
+</body>
+</html>
