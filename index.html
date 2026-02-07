@@ -49,11 +49,12 @@
         #scroll-track { height: 500vh; position: relative; }
         .sticky-container { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; }
 
-        /* LAYER 1: VIDEO */
+        /* LAYER 1: VIDEO/CANVAS */
         #hero-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover; z-index: 0; 
             filter: contrast(1.2) brightness(0.7) sepia(0.4) saturate(1.2);
+            background: #0f0800; /* Fallback color jika gambar gagal */
         }
 
         /* LAYER 2: 3D WORLD */
@@ -134,40 +135,16 @@
             transition: opacity 1s ease-out;
         }
 
-        /* ================= MOBILE OPTIMIZATION (FIXED) ================= */
+        /* ================= MOBILE OPTIMIZATION ================= */
         @media (max-width: 768px) {
-            #cursor, #cursor-follower { display: none; } /* Hide cursor di HP */
-            
-            .skills-grid {
-                /* Perkecil grid biar muat */
-                grid-template-columns: repeat(2, 1fr); 
-                gap: 10px; 
-                width: 95%;
-                margin-bottom: 20px; /* Jaga jarak dari nama */
-            }
-            .skill-card {
-                padding: 15px 10px; /* Padding lebih kecil */
-            }
-            .skill-card h3 {
-                font-size: 1.2rem; /* Font lebih kecil */
-                margin-bottom: 5px;
-            }
-            .skill-card p {
-                font-size: 0.7rem; /* Deskripsi kecil */
-                letter-spacing: 1px;
-            }
-            
-            .name-tag { 
-                bottom: 20px; right: 10px; left: 10px; /* Full width di bawah */
-                text-align: center;
-                padding: 15px 20px; 
-                border-right: none; border-bottom: 2px solid #FFD700;
-                background: rgba(20, 10, 0, 0.9);
-            }
+            #cursor, #cursor-follower { display: none; }
+            .skills-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 95%; margin-bottom: 20px; }
+            .skill-card { padding: 15px 10px; }
+            .skill-card h3 { font-size: 1.2rem; margin-bottom: 5px; }
+            .skill-card p { font-size: 0.7rem; letter-spacing: 1px; }
+            .name-tag { bottom: 20px; right: 10px; left: 10px; text-align: center; padding: 15px 20px; border-right: none; border-bottom: 2px solid #FFD700; background: rgba(20, 10, 0, 0.9); }
             .name-tag h1 { font-size: 2rem; min-width: auto; }
             .name-tag p { font-size: 0.8rem; letter-spacing: 2px; margin-top: 5px; }
-            
-            /* Sembunyikan Vignette di HP biar lebih terang */
             #vignette { opacity: 0.5; }
         }
     </style>
@@ -209,6 +186,8 @@
     <script type="module">
         import * as THREE from 'three';
 
+        // KONFIGURASI PENTING: Pastikan folder 'gg' ada di public folder Anda.
+        // Jika tidak ada, script sekarang tetap jalan (background hitam).
         const config = { folder: 'gg', frameCount: 150, prefix: 'ezgif-frame-', extension: 'jpg', digits: 3 };
 
         const canvas = document.getElementById("hero-canvas");
@@ -227,7 +206,7 @@
         let isLoaded = false;
         let scrollFraction = 0;
 
-        // ============ 1. CURSOR & TOUCH INPUT ============
+        // ============ CURSOR & MOUSE ============
         const cursor = document.getElementById("cursor");
         const follower = document.getElementById("cursor-follower");
         let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
@@ -242,7 +221,6 @@
             update3DMouse(e.clientX, e.clientY);
         });
 
-        // HANDLE TOUCH HP (GESEK LAYAR UNTUK ANGIN)
         document.addEventListener('touchmove', (e) => {
             if(e.touches.length > 0) {
                 const touch = e.touches[0];
@@ -250,8 +228,6 @@
                 update3DMouse(touch.clientX, touch.clientY);
             }
         }, { passive: false });
-
-        document.addEventListener('touchend', () => { mouse3DX = -9999; mouse3DY = -9999; });
 
         function update3DMouse(clientX, clientY) {
             mouse3DX = (clientX / window.innerWidth) * 2 - 1;
@@ -266,14 +242,15 @@
         }
         animateCursor();
 
-        // ============ 2. THREE.JS: OPTIMIZED AUTUMN ============
+        // ============ THREE.JS: AUTUMN ============
         let scene, camera, renderer;
         const leaves = [];
-        let rayMesh1, rayMesh2;
+        let rayMesh1;
 
         function init3DWorld() {
             const container = document.getElementById('three-canvas-container');
             scene = new THREE.Scene();
+            // Kabut lebih halus
             scene.fog = new THREE.FogExp2(0x1a1005, 0.02);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -281,7 +258,6 @@
 
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // OPTIMISASI UTAMA: BATASI PIXEL RATIO MAX 1.5
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
             container.appendChild(renderer.domElement);
 
@@ -291,7 +267,7 @@
             sunLight.position.set(30, 50, 20);
             scene.add(sunLight);
 
-            // GOD RAYS
+            // God Rays
             const rayGeometry = new THREE.ConeGeometry(30, 150, 32, 1, true);
             const rayMaterial = new THREE.MeshBasicMaterial({
                 color: 0xFFD700, transparent: true, opacity: 0.08, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
@@ -300,7 +276,7 @@
             rayMesh1.position.set(40, 70, -30); rayMesh1.rotation.set(Math.PI/8, 0, Math.PI/4);
             scene.add(rayMesh1);
 
-            // DAUN 500 BIJI
+            // Daun
             const leafShape = new THREE.Shape();
             leafShape.moveTo(0, 0.5);
             leafShape.bezierCurveTo(1.5, 2, 1.5, 5, 0, 7); 
@@ -341,21 +317,15 @@
         function animate3D() {
             requestAnimationFrame(animate3D);
             const time = Date.now() * 0.001;
-
             rayMesh1.rotation.y = Math.sin(time * 0.2) * 0.1;
-
-            // TITIK ANGIN DI 3D
-            // Kita pakai Z=0 sampai Z dalam biar efeknya "Tabung Angin"
             const targetPoint = new THREE.Vector3(mouse3DX * 50, mouse3DY * 50, 0);
 
             leaves.forEach(leaf => {
-                // Jatuh
                 leaf.position.y -= leaf.userData.speedY;
                 leaf.position.x = leaf.userData.initialX + Math.sin(time + leaf.userData.swayOffset) * 5;
                 leaf.rotation.x += leaf.userData.rotSpeedX;
                 leaf.rotation.z += leaf.userData.rotSpeedZ;
 
-                // Reset Loop
                 if(leaf.position.y < -70) {
                     leaf.position.y = 80;
                     leaf.position.x = (Math.random() - 0.5) * 140;
@@ -363,84 +333,101 @@
                     leaf.userData.initialX = leaf.position.x;
                 }
 
-                // --- INTERAKSI MENTAL YANG DIPERBAIKI ---
-                // Kita hitung jarak X dan Y saja (abaikan kedalaman Z)
-                // Jadi daun di belakang pun kena "Angin" kalau sejalur
                 const dx = leaf.position.x - targetPoint.x;
                 const dy = leaf.position.y - targetPoint.y;
                 const dist2D = Math.sqrt(dx*dx + dy*dy);
 
-                // Radius interaksi 40 (Cukup besar buat HP)
                 if(dist2D < 40) {
-                    // Arah tolak
                     const angle = Math.atan2(dy, dx);
-                    // Dorong kenceng (Speed 3.0)
                     leaf.position.x += Math.cos(angle) * 3.0;
                     leaf.position.y += Math.sin(angle) * 3.0;
-                    
-                    // Putar kenceng efek kena angin
-                    leaf.rotation.x += 0.5; 
-                    leaf.rotation.z += 0.5;
+                    leaf.rotation.x += 0.5; leaf.rotation.z += 0.5;
                 }
             });
-
-            // Kamera gerak halus
             camera.position.x += (mouse3DX * 5 - camera.position.x) * 0.05;
             camera.position.y += (mouse3DY * 5 - camera.position.y) * 0.05;
             camera.lookAt(scene.position);
-
             renderer.render(scene, camera);
         }
 
-        // ============ 3. PRELOAD & 2D ============
+        // ============ LOAD & DRAW ============
         const getPath = i => `${config.folder}/${config.prefix}${(i + 1).toString().padStart(config.digits, '0')}.${config.extension}`;
+
+        const draw = index => {
+            // FIX: Cek apakah gambar ada dan valid sebelum menggambar
+            // Ini mencegah error "Blank Screen" jika gambar tidak ketemu
+            if(!images[index] || !images[index].complete || images[index].naturalWidth === 0) return;
+            
+            const img = images[index];
+            const cRatio = canvas.width / canvas.height; const iRatio = img.width / img.height;
+            let dw, dh, ox, oy;
+            if(iRatio > cRatio){ dh = canvas.height; dw = img.width * (canvas.height/img.height); ox = (canvas.width - dw)/2; oy = 0; } 
+            else { dw = canvas.width; dh = img.height * (canvas.width/img.width); ox = 0; oy = (canvas.height - dh)/2; }
+            
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(img, ox, oy, dw, dh);
+        };
 
         const preload = () => {
             let count = 0;
             for(let i=0; i<config.frameCount; i++){
                 const img = new Image();
                 img.src = getPath(i);
-                img.onload = () => { images[i] = img; updateProgress(++count); };
-                img.onerror = () => { images[i] = images[i-1] || new Image(); updateProgress(++count); };
+                
+                // Jika sukses load
+                img.onload = () => { 
+                    images[i] = img; 
+                    checkProgress(++count); 
+                };
+                
+                // Jika GAGAL load (File tidak ada), tetap lanjut agar tidak hang
+                img.onerror = () => { 
+                    // console.warn('Gambar hilang:', i); // Uncomment untuk debug
+                    images[i] = null; // Tandai kosong
+                    checkProgress(++count); 
+                };
             }
         };
 
-        function updateProgress(count) {
+        function checkProgress(count) {
             const percent = Math.round((count/config.frameCount)*100);
             pText.innerText = percent + "%";
+            
             if(count === config.frameCount) {
-                isLoaded = true;
-                init3DWorld(); 
-                setTimeout(() => {
-                    loader.style.opacity = 0;
-                    setTimeout(()=> {
-                        loader.style.display='none';
-                        nameTag.classList.add('active');
-                    }, 1000);
-                    init();
-                }, 800);
+                startExperience();
             }
         }
 
-        const draw = index => {
-            if(!images[index]) return;
-            const img = images[index];
-            const cRatio = canvas.width / canvas.height; const iRatio = img.width / img.height;
-            let dw, dh, ox, oy;
-            if(iRatio > cRatio){ dh = canvas.height; dw = img.width * (canvas.height/img.height); ox = (canvas.width - dw)/2; oy = 0; } 
-            else { dw = canvas.width; dh = img.height * (canvas.width/img.width); ox = 0; oy = (canvas.height - dh)/2; }
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.drawImage(img, ox, oy, dw, dh);
-        };
+        function startExperience() {
+            if(isLoaded) return; // Mencegah double run
+            isLoaded = true;
+            init3DWorld(); 
+            
+            // Efek Loading Selesai
+            setTimeout(() => {
+                loader.style.opacity = 0;
+                setTimeout(()=> {
+                    loader.style.display='none';
+                    nameTag.classList.add('active'); // MUNCULKAN TEXT
+                }, 1000);
+                init();
+            }, 500);
+        }
 
-        // ============ 4. SCROLL LOGIC ============
+        // SAFETY NET: Jika gambar macet loading, paksa buka setelah 3 detik
+        setTimeout(() => {
+            if(!isLoaded) {
+                console.log("Memaksa masuk karena loading gambar terlalu lama/error");
+                startExperience();
+            }
+        }, 3000);
+
         const onScroll = () => {
             if(!isLoaded) return;
             const top = window.scrollY;
             const max = track.scrollHeight - window.innerHeight;
             scrollFraction = Math.min(Math.max(top/max, 0), 1);
 
-            // Ganti Nama "to explore"
             if (scrollFraction > 0.35 && !isNameShowing) {
                 changeNameText("Gabriel", "Creative Developer");
                 isNameShowing = true;
@@ -452,16 +439,14 @@
             const frame = Math.min(config.frameCount-1, Math.floor(scrollFraction * config.frameCount));
             requestAnimationFrame(() => draw(frame));
 
-            // LOGIKA KARTU: HILANG INSTAN SAAT SCROLL UP
             cards.forEach((card, index) => {
                 const trig = parseFloat(card.getAttribute('data-trigger'));
-                
                 if (scrollFraction > trig - 0.05) {
                     if (!card.classList.contains('visible')) {
                         setTimeout(() => card.classList.add('visible'), index * 100);
                     }
                 } else {
-                    card.classList.remove('visible'); // Hilang langsung
+                    card.classList.remove('visible');
                 }
             });
         };
