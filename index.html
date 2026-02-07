@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gabriel - Cinematic Autumn</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gabriel - Autumn Portfolio</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,7 @@
 
     <style>
         /* ================= RESET ================= */
-        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             background-color: #0f0800; 
@@ -27,37 +27,39 @@
             font-family: 'Quicksand', sans-serif;
             overflow-x: hidden;
             overscroll-behavior: none; 
+            /* Cursor default hidden, nanti diatur JS */
+            cursor: none; 
         }
 
-        /* ================= CURSOR ================= */
+        /* ================= CURSOR (HANYA PC) ================= */
         #cursor {
             position: fixed; width: 10px; height: 10px; background: #FFD700; 
             border-radius: 50%; pointer-events: none; z-index: 9999;
-            transform: translate(-50%, -50%); box-shadow: 0 0 20px #FFD700, 0 0 40px #FF8C00;
+            transform: translate(-50%, -50%); box-shadow: 0 0 20px #FFD700;
+            display: none; /* Hidden default */
         }
         #cursor-follower {
             position: fixed; width: 50px; height: 50px;
             border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 50%;
             pointer-events: none; z-index: 9998; transform: translate(-50%, -50%);
-            transition: width 0.1s, height 0.1s, background 0.1s;
+            transition: width 0.1s, height 0.1s;
+            display: none; /* Hidden default */
         }
-        body.hovering #cursor-follower {
-            width: 90px; height: 90px; background: rgba(255, 215, 0, 0.05); border-color: #fff;
+        /* Show cursor only on non-touch devices */
+        @media (hover: hover) {
+            #cursor, #cursor-follower { display: block; }
         }
 
         /* ================= LAYERS ================= */
         #scroll-track { height: 500vh; position: relative; }
         .sticky-container { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; }
 
-        /* LAYER 1: VIDEO/CANVAS */
         #hero-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover; z-index: 0; 
-            filter: contrast(1.2) brightness(0.7) sepia(0.4) saturate(1.2);
-            background: #0f0800; /* Fallback color jika gambar gagal */
+            filter: contrast(1.1) brightness(0.6) sepia(0.3); /* Gelapin dikit biar teks jelas */
         }
 
-        /* LAYER 2: 3D WORLD */
         #three-canvas-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 5; pointer-events: none; 
@@ -66,7 +68,7 @@
         #vignette {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 2;
-            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.95) 100%);
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.9) 100%);
         }
 
         /* ================= UI ELEMENTS ================= */
@@ -78,7 +80,7 @@
             border-right: 4px solid #FFD700; 
             backdrop-filter: blur(20px); border-radius: 4px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            transition: opacity 0.5s ease, transform 0.5s ease;
             opacity: 0; transform: translateY(20px);
         }
         .name-tag.active { opacity: 1; transform: translateY(0); }
@@ -92,60 +94,82 @@
         }
         .name-tag p {
             color: #fff; font-size: 1rem; letter-spacing: 5px; margin-top: 10px;
-            font-weight: 700; text-transform: uppercase; opacity: 0.8;
+            font-weight: 700; text-transform: uppercase; opacity: 0.9;
         }
 
         /* ================= SKILLS ================= */
         #skills-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 50vh;
+            position: absolute; top: 0; left: 0; width: 100%; height: 60vh; /* Area lebih tinggi */
             z-index: 100; pointer-events: none;
-            display: flex; justify-content: center; align-items: flex-end; padding-bottom: 50px;
+            display: flex; justify-content: center; align-items: flex-end; padding-bottom: 40px;
         }
         .skills-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
             width: 85%; max-width: 1100px; perspective: 1000px;
         }
         .skill-card {
-            background: rgba(30, 15, 0, 0.85);
+            background: rgba(30, 15, 0, 0.9); /* Lebih solid dikit */
             border: 1px solid rgba(255, 215, 0, 0.15);
             border-bottom: 3px solid #FF8C00;
-            padding: 30px 25px; text-align: center; border-radius: 16px;
+            padding: 25px 20px; text-align: center; border-radius: 12px;
             pointer-events: auto;
-            opacity: 0; transform: translateY(100px) rotateX(20deg); 
-            transition: all 0.6s cubic-bezier(0.2, 1, 0.3, 1);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            opacity: 0; transform: translateY(50px); /* Jarak muncul dikurangi */
+            transition: all 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .skill-card:hover {
-            background: rgba(50, 25, 0, 0.95); border-color: #FFD700;
-            transform: translateY(-10px) scale(1.05); cursor: pointer;
-            box-shadow: 0 20px 50px rgba(255, 140, 0, 0.2);
-        }
-        .skill-card.visible { opacity: 1; transform: translateY(0) rotateX(0); }
+        .skill-card.visible { opacity: 1; transform: translateY(0); }
         
         .skill-card h3 { 
             font-family: 'Playfair Display', serif; color: #FFD700; 
-            margin-bottom: 10px; font-size: 1.6rem; font-style: italic;
+            margin-bottom: 8px; font-size: 1.5rem; font-style: italic;
         }
-        .skill-card p { color: #ccc; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }
+        .skill-card p { color: #ddd; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 
         #loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #0f0800; z-index: 99999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 1s ease-out;
+            transition: opacity 0.8s ease-out;
         }
 
-        /* ================= MOBILE OPTIMIZATION ================= */
+        /* ================= MOBILE OPTIMIZATION (VERSI FIX) ================= */
         @media (max-width: 768px) {
-            #cursor, #cursor-follower { display: none; }
-            .skills-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 95%; margin-bottom: 20px; }
-            .skill-card { padding: 15px 10px; }
-            .skill-card h3 { font-size: 1.2rem; margin-bottom: 5px; }
-            .skill-card p { font-size: 0.7rem; letter-spacing: 1px; }
-            .name-tag { bottom: 20px; right: 10px; left: 10px; text-align: center; padding: 15px 20px; border-right: none; border-bottom: 2px solid #FFD700; background: rgba(20, 10, 0, 0.9); }
-            .name-tag h1 { font-size: 2rem; min-width: auto; }
-            .name-tag p { font-size: 0.8rem; letter-spacing: 2px; margin-top: 5px; }
-            #vignette { opacity: 0.5; }
+            /* 1. Kembalikan cursor default di HP agar scroll enak */
+            body { cursor: auto; }
+            
+            /* 2. Grid jadi 2 kolom & Font Kecil */
+            .skills-grid {
+                grid-template-columns: repeat(2, 1fr); 
+                gap: 8px; /* Jarak rapat */
+                width: 96%; /* Hampir full layar */
+                margin-bottom: 80px; /* Dorong ke atas biar ga ketutup nama */
+            }
+            .skill-card { 
+                padding: 12px 5px; /* Padding tipis */
+                min-height: 80px;
+                display: flex; flex-direction: column; justify-content: center;
+            }
+            .skill-card h3 { 
+                font-size: 1.1rem; /* Font Judul Kecil */
+                margin-bottom: 2px;
+            }
+            .skill-card p { 
+                font-size: 0.65rem; /* Font Deskripsi Kecil */
+                letter-spacing: 0.5px;
+            }
+            
+            /* 3. Posisi Nama di HP */
+            .name-tag { 
+                bottom: 15px; left: 10px; right: 10px;
+                text-align: center; padding: 15px; 
+                border-right: none; border-bottom: 2px solid #FFD700;
+                background: rgba(15, 8, 0, 0.95);
+            }
+            .name-tag h1 { font-size: 1.8rem; min-width: auto; }
+            .name-tag p { font-size: 0.75rem; letter-spacing: 2px; margin-top: 5px; }
+            
+            /* 4. Kurangi Vignette di HP biar terang */
+            #vignette { opacity: 0.4; }
         }
     </style>
 </head>
@@ -156,8 +180,8 @@
     <div id="vignette"></div>
 
     <div id="loader">
-        <h2 style="color: #FFD700; font-family: 'Playfair Display'; letter-spacing: 3px; font-style: italic; font-size: 2rem;">Loading...</h2>
-        <div style="margin-top: 15px; color: #888; font-size: 14px; letter-spacing: 2px;" id="progress-text">0%</div>
+        <h2 style="color: #FFD700; font-family: 'Playfair Display'; letter-spacing: 2px; font-style: italic; font-size: 1.8rem;">Loading...</h2>
+        <div style="margin-top: 10px; color: #888; font-size: 12px; letter-spacing: 1px;" id="progress-text">0%</div>
     </div>
 
     <div id="scroll-track">
@@ -165,19 +189,19 @@
             <canvas id="hero-canvas"></canvas>
             <div id="three-canvas-container"></div>
             
-            <div class="name-tag" id="main-name-tag" onmouseenter="addHover()" onmouseleave="removeHover()">
+            <div class="name-tag" id="main-name-tag">
                 <h1 id="name-heading">SCROLL DOWN</h1>
                 <p id="name-sub">to explore</p>
             </div>
 
             <div id="skills-layer">
                 <div class="skills-grid">
-                    <div class="skill-card" data-trigger="0.38" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Web Dev</h3><p>React Ecosystem</p></div>
-                    <div class="skill-card" data-trigger="0.41" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Security</h3><p>Ethical Hacking</p></div>
-                    <div class="skill-card" data-trigger="0.44" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Mobile</h3><p>Cross Platform</p></div>
-                    <div class="skill-card" data-trigger="0.47" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>3D & AR</h3><p>Immersive Web</p></div>
-                     <div class="skill-card" data-trigger="0.50" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Backend</h3><p>Scalable API</p></div>
-                     <div class="skill-card" data-trigger="0.53" onmouseenter="addHover()" onmouseleave="removeHover()"><h3>Design</h3><p>UI Aesthetics</p></div>
+                    <div class="skill-card" data-trigger="0.25"><h3>Web Dev</h3><p>React Ecosystem</p></div>
+                    <div class="skill-card" data-trigger="0.28"><h3>Security</h3><p>Ethical Hacking</p></div>
+                    <div class="skill-card" data-trigger="0.31"><h3>Mobile</h3><p>Cross Platform</p></div>
+                    <div class="skill-card" data-trigger="0.34"><h3>3D & AR</h3><p>Immersive Web</p></div>
+                     <div class="skill-card" data-trigger="0.37"><h3>Backend</h3><p>Scalable API</p></div>
+                     <div class="skill-card" data-trigger="0.40"><h3>Design</h3><p>UI Aesthetics</p></div>
                 </div>
             </div>
         </div>
@@ -186,8 +210,7 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // KONFIGURASI PENTING: Pastikan folder 'gg' ada di public folder Anda.
-        // Jika tidak ada, script sekarang tetap jalan (background hitam).
+        // Config gambar
         const config = { folder: 'gg', frameCount: 150, prefix: 'ezgif-frame-', extension: 'jpg', digits: 3 };
 
         const canvas = document.getElementById("hero-canvas");
@@ -206,21 +229,22 @@
         let isLoaded = false;
         let scrollFraction = 0;
 
-        // ============ CURSOR & MOUSE ============
+        // ============ 1. CURSOR & INTERACTION INPUT ============
         const cursor = document.getElementById("cursor");
         const follower = document.getElementById("cursor-follower");
         let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
         let mouse3DX = -9999, mouse3DY = -9999; 
 
-        window.addHover = () => document.body.classList.add('hovering');
-        window.removeHover = () => document.body.classList.remove('hovering');
-
+        // Update Mouse Position (PC)
         document.addEventListener('mousemove', (e) => {
             mouseX = e.clientX; mouseY = e.clientY;
+            // Update UI Cursor
             cursor.style.left = mouseX + 'px'; cursor.style.top = mouseY + 'px';
+            // Update 3D Wind
             update3DMouse(e.clientX, e.clientY);
         });
 
+        // Update Touch Position (HP) - BIAR DAUN MENTAL
         document.addEventListener('touchmove', (e) => {
             if(e.touches.length > 0) {
                 const touch = e.touches[0];
@@ -229,39 +253,50 @@
             }
         }, { passive: false });
 
+        document.addEventListener('touchend', () => { mouse3DX = -9999; mouse3DY = -9999; });
+
         function update3DMouse(clientX, clientY) {
+            // Normalisasi koordinat -1 s/d 1
             mouse3DX = (clientX / window.innerWidth) * 2 - 1;
             mouse3DY = -(clientY / window.innerHeight) * 2 + 1;
         }
 
+        // Animasi Follower Cursor
         function animateCursor() {
-            posX += (mouseX - posX) / 6; 
-            posY += (mouseY - posY) / 6;
-            follower.style.left = posX + 'px'; follower.style.top = posY + 'px';
+            if(window.matchMedia("(hover: hover)").matches) {
+                posX += (mouseX - posX) / 6; 
+                posY += (mouseY - posY) / 6;
+                follower.style.left = posX + 'px'; follower.style.top = posY + 'px';
+            }
             requestAnimationFrame(animateCursor);
         }
         animateCursor();
 
-        // ============ THREE.JS: AUTUMN ============
+        // ============ 2. THREE.JS: OPTIMIZED AUTUMN ============
         let scene, camera, renderer;
         const leaves = [];
-        let rayMesh1;
+        let rayMesh1, rayMesh2;
 
         function init3DWorld() {
             const container = document.getElementById('three-canvas-container');
             scene = new THREE.Scene();
-            // Kabut lebih halus
-            scene.fog = new THREE.FogExp2(0x1a1005, 0.02);
+            // Kabut Atmosfer
+            scene.fog = new THREE.FogExp2(0x1a1005, 0.015);
 
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 50;
+            
+            // Logika Kamera: Mundur kalau di HP biar area luas
+            const isMobile = window.innerWidth < 768;
+            camera.position.z = isMobile ? 75 : 50;
 
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false }); 
             renderer.setSize(window.innerWidth, window.innerHeight);
+            // Optimasi Render (Max pixel ratio 1.5 biar ga panas)
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
             container.appendChild(renderer.domElement);
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
             const sunLight = new THREE.DirectionalLight(0xFF8C00, 2.5); 
             sunLight.position.set(30, 50, 20);
@@ -276,13 +311,12 @@
             rayMesh1.position.set(40, 70, -30); rayMesh1.rotation.set(Math.PI/8, 0, Math.PI/4);
             scene.add(rayMesh1);
 
-            // Daun
+            // === DAUN GUGUR (500 Buah) ===
             const leafShape = new THREE.Shape();
             leafShape.moveTo(0, 0.5);
             leafShape.bezierCurveTo(1.5, 2, 1.5, 5, 0, 7); 
             leafShape.bezierCurveTo(-1.5, 5, -1.5, 2, 0, 0.5);
             const geometry = new THREE.ShapeGeometry(leafShape);
-            
             const colors = [0x8B4513, 0xA0522D, 0xD2691E, 0xFF8C00, 0xB8860B, 0x800000];
 
             for(let i=0; i<500; i++) {
@@ -292,21 +326,26 @@
                 });
                 const mesh = new THREE.Mesh(geometry, material);
 
+                // Area Sebaran Daun
+                // Kalau HP (isMobile) sebarannya dipersempit di X biar ga kebuang di samping
+                const spreadX = isMobile ? 70 : 140;
+
                 mesh.position.set(
-                    (Math.random() - 0.5) * 140,
+                    (Math.random() - 0.5) * spreadX,
                     (Math.random() - 0.5) * 120 + 30,
-                    (Math.random() - 0.5) * 120 
+                    (Math.random() - 0.5) * 100 
                 );
                 const s = Math.random() * 0.3 + 0.15;
                 mesh.scale.set(s, s, s);
                 mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
                 
                 mesh.userData = {
-                    speedY: Math.random() * 0.06 + 0.02, 
+                    speedY: Math.random() * 0.05 + 0.02, 
                     rotSpeedX: Math.random() * 0.05,
                     rotSpeedZ: Math.random() * 0.05,
                     initialX: mesh.position.x,
-                    swayOffset: Math.random() * 100
+                    swayOffset: Math.random() * 100,
+                    spawnSpreadX: spreadX // Simpan info spread buat reset
                 };
                 leaves.push(mesh);
                 scene.add(mesh);
@@ -317,117 +356,103 @@
         function animate3D() {
             requestAnimationFrame(animate3D);
             const time = Date.now() * 0.001;
+
             rayMesh1.rotation.y = Math.sin(time * 0.2) * 0.1;
+
+            // TITIK ANGIN 3D
             const targetPoint = new THREE.Vector3(mouse3DX * 50, mouse3DY * 50, 0);
 
             leaves.forEach(leaf => {
+                // Fisika Jatuh
                 leaf.position.y -= leaf.userData.speedY;
-                leaf.position.x = leaf.userData.initialX + Math.sin(time + leaf.userData.swayOffset) * 5;
+                leaf.position.x = leaf.userData.initialX + Math.sin(time + leaf.userData.swayOffset) * 4;
                 leaf.rotation.x += leaf.userData.rotSpeedX;
                 leaf.rotation.z += leaf.userData.rotSpeedZ;
 
+                // Reset Loop (Balik ke atas)
                 if(leaf.position.y < -70) {
                     leaf.position.y = 80;
-                    leaf.position.x = (Math.random() - 0.5) * 140;
-                    leaf.position.z = (Math.random() - 0.5) * 120;
+                    leaf.position.x = (Math.random() - 0.5) * leaf.userData.spawnSpreadX;
+                    leaf.position.z = (Math.random() - 0.5) * 100;
                     leaf.userData.initialX = leaf.position.x;
                 }
 
+                // === INTERAKSI MENTAL KUAT (TABUNG ANGIN) ===
+                // Hitung jarak 2D (abaikan kedalaman Z) agar interaksi lebih gampang
                 const dx = leaf.position.x - targetPoint.x;
                 const dy = leaf.position.y - targetPoint.y;
                 const dist2D = Math.sqrt(dx*dx + dy*dy);
 
-                if(dist2D < 40) {
+                // Radius diperbesar jadi 35
+                if(dist2D < 35) {
                     const angle = Math.atan2(dy, dx);
-                    leaf.position.x += Math.cos(angle) * 3.0;
-                    leaf.position.y += Math.sin(angle) * 3.0;
-                    leaf.rotation.x += 0.5; leaf.rotation.z += 0.5;
+                    // Force = 2.5 (Cukup kuat buat mentalin daun)
+                    leaf.position.x += Math.cos(angle) * 2.5;
+                    leaf.position.y += Math.sin(angle) * 2.5;
+                    leaf.rotation.x += 0.5; 
                 }
             });
-            camera.position.x += (mouse3DX * 5 - camera.position.x) * 0.05;
-            camera.position.y += (mouse3DY * 5 - camera.position.y) * 0.05;
-            camera.lookAt(scene.position);
+
+            // Kamera gerak dikit (Parallax) - Cuma di PC
+            if(window.innerWidth > 768) {
+                camera.position.x += (mouse3DX * 5 - camera.position.x) * 0.05;
+                camera.position.y += (mouse3DY * 5 - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+            }
+
             renderer.render(scene, camera);
         }
 
-        // ============ LOAD & DRAW ============
+        // ============ 3. PRELOAD & 2D ============
         const getPath = i => `${config.folder}/${config.prefix}${(i + 1).toString().padStart(config.digits, '0')}.${config.extension}`;
-
-        const draw = index => {
-            // FIX: Cek apakah gambar ada dan valid sebelum menggambar
-            // Ini mencegah error "Blank Screen" jika gambar tidak ketemu
-            if(!images[index] || !images[index].complete || images[index].naturalWidth === 0) return;
-            
-            const img = images[index];
-            const cRatio = canvas.width / canvas.height; const iRatio = img.width / img.height;
-            let dw, dh, ox, oy;
-            if(iRatio > cRatio){ dh = canvas.height; dw = img.width * (canvas.height/img.height); ox = (canvas.width - dw)/2; oy = 0; } 
-            else { dw = canvas.width; dh = img.height * (canvas.width/img.width); ox = 0; oy = (canvas.height - dh)/2; }
-            
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            ctx.drawImage(img, ox, oy, dw, dh);
-        };
 
         const preload = () => {
             let count = 0;
             for(let i=0; i<config.frameCount; i++){
                 const img = new Image();
                 img.src = getPath(i);
-                
-                // Jika sukses load
-                img.onload = () => { 
-                    images[i] = img; 
-                    checkProgress(++count); 
-                };
-                
-                // Jika GAGAL load (File tidak ada), tetap lanjut agar tidak hang
-                img.onerror = () => { 
-                    // console.warn('Gambar hilang:', i); // Uncomment untuk debug
-                    images[i] = null; // Tandai kosong
-                    checkProgress(++count); 
-                };
+                img.onload = () => { images[i] = img; updateProgress(++count); };
+                img.onerror = () => { images[i] = images[i-1] || new Image(); updateProgress(++count); };
             }
         };
 
-        function checkProgress(count) {
+        function updateProgress(count) {
             const percent = Math.round((count/config.frameCount)*100);
             pText.innerText = percent + "%";
-            
             if(count === config.frameCount) {
-                startExperience();
+                isLoaded = true;
+                init3DWorld(); 
+                setTimeout(() => {
+                    loader.style.opacity = 0;
+                    setTimeout(()=> {
+                        loader.style.display='none';
+                        nameTag.classList.add('active');
+                    }, 800);
+                    init();
+                }, 500);
             }
         }
 
-        function startExperience() {
-            if(isLoaded) return; // Mencegah double run
-            isLoaded = true;
-            init3DWorld(); 
-            
-            // Efek Loading Selesai
-            setTimeout(() => {
-                loader.style.opacity = 0;
-                setTimeout(()=> {
-                    loader.style.display='none';
-                    nameTag.classList.add('active'); // MUNCULKAN TEXT
-                }, 1000);
-                init();
-            }, 500);
-        }
+        const draw = index => {
+            if(!images[index]) return;
+            const img = images[index];
+            const cRatio = canvas.width / canvas.height; const iRatio = img.width / img.height;
+            let dw, dh, ox, oy;
+            if(iRatio > cRatio){ dh = canvas.height; dw = img.width * (canvas.height/img.height); ox = (canvas.width - dw)/2; oy = 0; } 
+            else { dw = canvas.width; dh = img.height * (canvas.width/img.width); ox = 0; oy = (canvas.height - dh)/2; }
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(img, ox, oy, dw, dh);
+        };
 
-        // SAFETY NET: Jika gambar macet loading, paksa buka setelah 3 detik
-        setTimeout(() => {
-            if(!isLoaded) {
-                console.log("Memaksa masuk karena loading gambar terlalu lama/error");
-                startExperience();
-            }
-        }, 3000);
-
+        // ============ 4. SCROLL LOGIC ============
         const onScroll = () => {
             if(!isLoaded) return;
-            const top = window.scrollY;
+            // Gunakan scrollY agar lebih universal
+            const top = window.scrollY || track.scrollTop;
             const max = track.scrollHeight - window.innerHeight;
             scrollFraction = Math.min(Math.max(top/max, 0), 1);
 
+            // Ganti Nama Logic
             if (scrollFraction > 0.35 && !isNameShowing) {
                 changeNameText("Gabriel", "Creative Developer");
                 isNameShowing = true;
@@ -439,14 +464,19 @@
             const frame = Math.min(config.frameCount-1, Math.floor(scrollFraction * config.frameCount));
             requestAnimationFrame(() => draw(frame));
 
+            // Logic Kartu Muncul
             cards.forEach((card, index) => {
                 const trig = parseFloat(card.getAttribute('data-trigger'));
-                if (scrollFraction > trig - 0.05) {
+                
+                // Di HP, kita kurangi threshold sedikit biar gampang muncul
+                const threshold = window.innerWidth < 768 ? trig - 0.1 : trig - 0.05;
+
+                if (scrollFraction > threshold) {
                     if (!card.classList.contains('visible')) {
-                        setTimeout(() => card.classList.add('visible'), index * 100);
+                        setTimeout(() => card.classList.add('visible'), index * 80);
                     }
                 } else {
-                    card.classList.remove('visible');
+                    card.classList.remove('visible'); 
                 }
             });
         };
@@ -466,13 +496,17 @@
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
+                
+                // Update Responsive Logic
+                const isMobile = window.innerWidth < 768;
+                camera.position.z = isMobile ? 75 : 50;
             }
             if(isLoaded) onScroll();
         };
 
         function init(){
             onResize();
-            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('scroll', onScroll, { passive: true }); // Listener di Window
             window.addEventListener('resize', onResize);
             onScroll();
         }
